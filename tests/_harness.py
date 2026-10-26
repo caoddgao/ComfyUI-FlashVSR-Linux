@@ -38,6 +38,15 @@ def _stub_comfy():
     fp.models_dir = os.path.join(TMP, "models")
     fp.get_output_directory = lambda: os.path.join(TMP, "output")
     fp.get_temp_directory = lambda: os.path.join(TMP, "temp")
+    fp.folder_names_and_paths = {"checkpoints": ([os.path.join(fp.models_dir, "checkpoints")], set())}
+
+    def add_model_folder_path(name, path, is_default=False):
+        paths = fp.folder_names_and_paths.setdefault(name, ([], set()))[0]
+        if path not in paths:
+            paths.insert(0, path) if is_default else paths.append(path)
+
+    fp.add_model_folder_path = add_model_folder_path
+    fp.get_folder_paths = lambda name: list(fp.folder_names_and_paths[name][0])
     for d in (fp.models_dir, fp.get_output_directory(), fp.get_temp_directory()):
         os.makedirs(d, exist_ok=True)
     sys.modules.update({"comfy": comfy, "comfy.model_management": mm, "comfy.utils": utils, "folder_paths": fp})

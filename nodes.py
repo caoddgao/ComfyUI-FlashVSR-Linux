@@ -10,18 +10,58 @@ from .runtime import runner, video
 
 CATEGORY = "FlashVSR-Linux"
 MODEL_DIR_NAMES = ["FlashVSR-v1.1", "FlashVSR"]
+FOLDER_KEY = "flashvsr"
+
+# Lets extra_model_paths.yaml use "flashvsr: <dir>" (a model folder or a folder containing them).
+folder_paths.add_model_folder_path(FOLDER_KEY, os.path.join(folder_paths.models_dir, "FlashVSR-v1.1"))
+
+
+def _is_model_dir(path):
+    return os.path.isfile(os.path.join(path, runner.DIT_FILE))
+
+
+def _subdirs(root):
+    try:
+        return [os.path.join(root, n) for n in sorted(os.listdir(root)) if os.path.isdir(os.path.join(root, n))]
+    except OSError:
+        return []
+
+
+def find_model_dirs():
+    """{display name: absolute path} of FlashVSR model folders.
+
+    Looks at the "flashvsr" entries of extra_model_paths.yaml (each may be a model
+    folder or contain model folders) and at sub folders named *flashvsr* of
+    ComfyUI/models and of the parent of every configured model folder
+    (e.g. base_path in extra_model_paths.yaml).
+    """
+    found = []
+    try:
+        registered = folder_paths.get_folder_paths(FOLDER_KEY)
+    except KeyError:
+        registered = []
+    for path in registered:
+        if _is_model_dir(path):
+            found.append(path)
+        else:
+            found += [d for d in _subdirs(path) if _is_model_dir(d)]
+    roots = [folder_paths.models_dir]
+    for paths, _ in folder_paths.folder_names_and_paths.values():
+        roots += [os.path.dirname(os.path.normpath(p)) for p in paths]
+    for root in dict.fromkeys(roots):
+        found += [d for d in _subdirs(root) if "flashvsr" in os.path.basename(d).lower()]
+    choices = {}
+    for path in dict.fromkeys(os.path.abspath(p) for p in found):
+        name = os.path.basename(path)
+        if name in choices and choices[name] != path:
+            name = f"{name} ({os.path.dirname(path)})"
+        choices.setdefault(name, path)
+    return choices
 
 
 def model_dir_choices():
-    names = list(MODEL_DIR_NAMES)
-    try:
-        for name in sorted(os.listdir(folder_paths.models_dir)):
-            if name.lower().startswith("flashvsr") and name not in names and \
-                    os.path.isdir(os.path.join(folder_paths.models_dir, name)):
-                names.append(name)
-    except OSError:
-        pass
-    return names
+    names = list(find_model_dirs())
+    return names or list(MODEL_DIR_NAMES)
 
 
 def device_choices():
@@ -51,7 +91,7 @@ class FlashVSRLinuxModel:
     CATEGORY = CATEGORY
 
     def load(self, model, mode, precision, device):
-        model_dir = os.path.join(folder_paths.models_dir, model)
+        model_dir = find_model_dirs().get(model, os.path.join(folder_paths.models_dir, model))
         dev = mm.get_torch_device() if device == "auto" else torch.device(device)
         key = (model_dir, mode, precision, str(dev))
         if key not in _MODEL_CACHE:

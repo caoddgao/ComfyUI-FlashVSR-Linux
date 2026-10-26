@@ -63,6 +63,17 @@ Windows 专用的闭源二进制（`nodes.pyd`、`te_runtime/*.pyd`），在 Lin
 
    目录名里带 `1.1` 的按 v1.1 加载（因果 LQ 投影），否则按 v1.0。
 
+   模型不在 `ComfyUI/models/` 下也可以，节点会自动查找：
+   - `extra_model_paths.yaml` 里配置的各个模型路径的上一级目录（通常就是 `base_path`）下，名字含 `flashvsr` 的文件夹；
+   - `extra_model_paths.yaml` 里的 `flashvsr:` 条目，可以指向模型文件夹本身，也可以指向包含多个模型文件夹的目录，例如：
+
+     ```yaml
+     my_models:
+         base_path: /mnt/data/AI_Hub/image_models
+         checkpoints: checkpoints
+         flashvsr: FlashVSR-v1.1
+     ```
+
 如果之前装了 TE-Speed-FlashVSR，它在 Linux 上本来就加载不了，可以移出 `custom_nodes`。两者的节点名不同，不会冲突。
 
 ## 节点

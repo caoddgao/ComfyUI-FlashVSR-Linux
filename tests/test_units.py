@@ -162,10 +162,10 @@ def test_settings_and_model_nodes():
     ok = set(built) == set(runner.DEFAULT_SETTINGS)
     report("settings node produces every runner setting", ok, str(sorted(set(built) ^ set(runner.DEFAULT_SETTINGS))))
     try:
-        nodes.FlashVSRLinuxModel().load("FlashVSR-v1.1", "tiny", "bf16", "cpu")
+        nodes.FlashVSRLinuxModel().load("FlashVSR-does-not-exist", "tiny", "bf16", "cpu")
         report("model node reports missing weight files", False)
     except FileNotFoundError as e:
-        report("model node reports missing weight files", "diffusion_pytorch_model_streaming_dmd.safetensors" in str(e), str(e))
+        report("model node reports missing weight files", "FlashVSR-does-not-exist" in str(e) and "LQ_proj_in.ckpt" in str(e), str(e))
 
 
 class _IdentityPipe:
@@ -211,6 +211,32 @@ def test_run_geometry_with_identity_pipeline():
             err = (out - ref).abs().max().item()
             report(f"run(): crop/pad/blend/frame trim exact, x{scale} {strategy} tile={tile}",
                    out.shape == ref.shape and err < 1e-5, f"shape={tuple(out.shape)} max_abs_err={err:.1e}")
+
+
+def test_model_dir_discovery():
+    fp = sys.modules["folder_paths"]
+    runner = h.sub("runtime.runner")
+
+    def make(path, real=True):
+        os.makedirs(path, exist_ok=True)
+        if real:
+            open(os.path.join(path, runner.DIT_FILE), "w").close()
+        return path
+
+    ext = os.path.join(h.TMP, "mnt", "image_models")            # like base_path in extra_model_paths.yaml
+    os.makedirs(os.path.join(ext, "checkpoints"), exist_ok=True)
+    fp.add_model_folder_path("checkpoints", os.path.join(ext, "checkpoints"))
+    v11 = make(os.path.join(ext, "FlashVSR-v1.1"))
+    local = make(os.path.join(fp.models_dir, "FlashVSR-v1.1"))   # same name in ComfyUI/models
+    custom = make(os.path.join(h.TMP, "elsewhere", "my_vsr_weights"))
+    fp.add_model_folder_path("flashvsr", custom)                 # "flashvsr: <model dir>" in the yaml
+    found = nodes.find_model_dirs()
+    paths = set(found.values())
+    ok = {v11, local, custom} <= paths and len(found) == len(paths) and "my_vsr_weights" in found
+    report("model folders found in models/, extra_model_paths base and 'flashvsr:' entries", ok,
+           json.dumps({k: os.path.relpath(v, h.TMP) for k, v in found.items()}))
+    choices = nodes.FlashVSRLinuxModel.INPUT_TYPES()["required"]["model"][0]
+    report("model node lists the discovered folders", set(choices) == set(found), str(choices))
 
 
 def main():
