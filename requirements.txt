@@ -1,0 +1,8 @@
+# Already present in a normal ComfyUI install:
+einops
+safetensors
+tqdm
+# Sparse attention (at least one; see README):
+#   spas_sage_attn     -- SpargeAttn, default backend "sparse_sage2"
+#   block_sparse_attn  -- mit-han-lab Block-Sparse-Attention
+# Video Combine needs an ffmpeg binary (apt install ffmpeg) or: pip install imageio-ffmpeg

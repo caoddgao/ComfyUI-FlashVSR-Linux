@@ -1,0 +1,47 @@
+ComfyUI-FlashVSR-Linux
+======================
+
+This project contains code from:
+
+* FlashVSR -- https://github.com/OpenImagingLab/FlashVSR (Apache License 2.0),
+  commit 0d403ee351905cb1d5eb802855cc4c1f0f4cf929, which is built on
+  DiffSynth-Studio -- https://github.com/modelscope/DiffSynth-Studio (Apache License 2.0).
+
+Files taken from FlashVSR (paths there -> paths here):
+
+  diffsynth/pipelines/flashvsr_tiny.py       -> flashvsr/pipelines/flashvsr_tiny.py       (modified)
+  diffsynth/pipelines/flashvsr_tiny_long.py  -> flashvsr/pipelines/flashvsr_tiny_long.py  (modified)
+  diffsynth/pipelines/flashvsr_full.py       -> flashvsr/pipelines/flashvsr_full.py       (modified)
+  diffsynth/pipelines/base.py                -> flashvsr/pipelines/base.py                (modified)
+  diffsynth/models/wan_video_dit.py          -> flashvsr/models/wan_video_dit.py          (modified)
+  diffsynth/models/model_manager.py          -> flashvsr/models/model_manager.py          (modified)
+  diffsynth/configs/model_config.py          -> flashvsr/configs/model_config.py          (modified, trimmed)
+  diffsynth/models/wan_video_vae.py          -> flashvsr/models/wan_video_vae.py          (unchanged)
+  diffsynth/models/utils.py                  -> flashvsr/models/utils.py                  (unchanged)
+  diffsynth/schedulers/flow_match.py         -> flashvsr/schedulers/flow_match.py         (unchanged)
+  diffsynth/vram_management/__init__.py      -> flashvsr/vram_management/__init__.py      (unchanged)
+  diffsynth/vram_management/layers.py        -> flashvsr/vram_management/layers.py        (unchanged)
+  examples/WanVSR/utils/TCDecoder.py         -> flashvsr/models/TCDecoder.py              (unchanged)
+  examples/WanVSR/utils/utils.py             -> flashvsr/models/lq_proj.py                (unchanged)
+  examples/WanVSR/prompt_tensor/posi_prompt.pth -> assets/posi_prompt.pth                 (unchanged)
+
+The complete list of changes is in patches/flashvsr-upstream-changes.diff. In short:
+  * the block-sparse attention call is routed through runtime/attention.py
+    (SpargeAttn, Block-Sparse-Attention or PyTorch SDPA) instead of importing
+    block_sparse_attn unconditionally;
+  * optional attention libraries are probed with "except Exception";
+  * the pipelines accept chunk_schedule (per-chunk top-k / KV / local range),
+    before_decode (memory staging hook) and use progress_bar_cmd;
+  * init_cross_kv uses its prompt_path argument instead of a hard-coded path;
+  * unrelated DiffSynth-Studio models and the downloader were removed;
+  * a torch.cuda.synchronize() timing call was removed and empty_cache() is
+    guarded so the code also runs on CPU (used by the tests).
+
+Everything else (__init__.py, nodes.py, runtime/, web/, tests/) is new code
+written for this project, also under the Apache License 2.0.
+
+The node set and option names follow the public README of TE-Speed-FlashVSR
+(https://github.com/tl2012tl/TE-Speed-FlashVSR). No code from its closed-source
+binaries (nodes.pyd, te_runtime/*.pyd) is used; the motion-aware budget,
+tiling and video writer here are independent implementations. This project is
+not affiliated with or endorsed by the authors of TE-Speed-FlashVSR or FlashVSR.
