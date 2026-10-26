@@ -1,13 +1,13 @@
 # ComfyUI-FlashVSR-Linux
 
+[中文](#中文) · [English](#english)
+
+<a id="中文"></a>
+## 中文
+
 在 Linux 上运行 [FlashVSR](https://github.com/OpenImagingLab/FlashVSR) 视频超分的 ComfyUI 节点，完全开源（Apache-2.0）。
 
-*English: open-source ComfyUI nodes for FlashVSR video super-resolution on Linux, built on upstream
-FlashVSR, with SpargeAttn / Block-Sparse-Attention sparse attention, motion-aware attention budget,
-spatial tiling and an ffmpeg video writer. Status: CPU-tested with random weights only; GPU tests with
-the real weights are pending — see "测试状态".*
-
-## 由来
+### 由来
 
 [TE-Speed-FlashVSR](https://github.com/tl2012tl/TE-Speed-FlashVSR) 是一个很好用的 FlashVSR 节点，但核心代码是
 Windows 专用的闭源二进制（`nodes.pyd`、`te_runtime/*.pyd`），在 Linux 上无法加载。本项目参考它公开 README 里的
@@ -18,7 +18,7 @@ Windows 专用的闭源二进制（`nodes.pyd`、`te_runtime/*.pyd`），在 Lin
 - 与 TE-Speed-FlashVSR 和 FlashVSR 的作者没有关联，也没有得到他们的背书。
 - 模型推理代码来自上游 FlashVSR（Apache-2.0），改动见 `NOTICE` 和 `patches/flashvsr-upstream-changes.diff`。
 
-## 测试状态（请先看）
+### 测试状态（请先看）
 
 | 项目 | 状态 |
 |---|---|
@@ -27,7 +27,7 @@ Windows 专用的闭源二进制（`nodes.pyd`、`te_runtime/*.pyd`），在 Lin
 | GPU 上 sparse_sage2 / block_sparse_attn 与参考实现数值一致 | ⏳ 待测：`tests/check_gpu.py` |
 | 真实权重的画质与速度 | ⏳ 待测（开发环境没有 GPU，也下载不到权重） |
 
-## 安装
+### 安装
 
 1. 克隆到 ComfyUI 的 `custom_nodes`：
 
@@ -76,7 +76,7 @@ Windows 专用的闭源二进制（`nodes.pyd`、`te_runtime/*.pyd`），在 Lin
 
 如果之前装了 TE-Speed-FlashVSR，它在 Linux 上本来就加载不了，可以移出 `custom_nodes`。两者的节点名不同，不会冲突。
 
-## 节点
+### 节点
 
 | 节点 | 作用 |
 |---|---|
@@ -87,7 +87,7 @@ Windows 专用的闭源二进制（`nodes.pyd`、`te_runtime/*.pyd`），在 Lin
 
 典型连线：Load Video → FlashVSR Upscale (Linux) → FlashVSR Video Combine (Linux)，Model 节点接到 Upscale。
 
-### Settings 参数
+#### Settings 参数
 
 - `quality_profile`：`detail`（sparse 2.0 / local 9）、`balanced`（2.0 / 11，默认）、`throughput`（1.5 / 11）。
   这些是上游推荐值：sparse_ratio 1.5 更快、2.0 更稳；local_range 9 更锐、11 更稳。
@@ -106,13 +106,13 @@ Windows 专用的闭源二进制（`nodes.pyd`、`te_runtime/*.pyd`），在 Lin
   `auto`（整帧用 block_sparse_attn，分块用 sparse_sage2）、`sdpa`（很慢的稠密参考实现，只用于对比）。
   选中的库不可用时会自动退到另一个，并在控制台打印原因。
 
-### 和上游一致的行为
+#### 和上游一致的行为
 
 - 输入先双三次放大到目标尺寸，再补边到 128 的倍数，结果会裁回原尺寸（上游是中心裁剪，会丢掉边缘；这里不丢）。
 - 帧数会用最后一帧补齐到 8k+1（至少 25 帧，上游的最小长度），输出帧数和输入完全一样。
 - 只做一步推理（cfg 1.0），与上游示例相同。
 
-## 自检
+### 自检
 
 ```bash
 cd ~/comfyui/custom_nodes/ComfyUI-FlashVSR-Linux/tests
@@ -124,7 +124,7 @@ cd ~/comfyui/custom_nodes/ComfyUI-FlashVSR-Linux/tests
 
 `check_gpu.py` 会打印每个后端和参考实现的余弦相似度（应 > 0.99）、耗时，以及用真实权重放大一段合成视频的速度和显存峰值。
 
-## 目录结构
+### 目录结构
 
 ```text
 __init__.py, nodes.py     ComfyUI 节点
@@ -138,6 +138,155 @@ web/flashvsr_linux.js     Video Combine 节点内预览
 tests/                    CPU 测试与 GPU 自检
 ```
 
-## 许可证
+### 许可证
 
 Apache License 2.0，见 `LICENSE` 和 `NOTICE`。
+
+<a id="english"></a>
+## English
+
+Open-source (Apache-2.0) ComfyUI nodes for running [FlashVSR](https://github.com/OpenImagingLab/FlashVSR) video super-resolution on Linux.
+
+### Background
+
+[TE-Speed-FlashVSR](https://github.com/tl2012tl/TE-Speed-FlashVSR) is a good FlashVSR node pack, but its core is a closed-source
+Windows-only binary (`nodes.pyd`, `te_runtime/*.pyd`) that cannot be loaded on Linux. This project follows the node design and
+parameters described in its public README and reimplements them on top of the open-source upstream FlashVSR code:
+
+- It does **not** use any code from the TE-Speed-FlashVSR binaries. Dynamic budgeting, tiling and video writing are independent
+  implementations, so quality and speed will not exactly match the TE version.
+- It is not affiliated with or endorsed by the authors of TE-Speed-FlashVSR or FlashVSR.
+- The model inference code comes from upstream FlashVSR (Apache-2.0). Changes are listed in `NOTICE` and
+  `patches/flashvsr-upstream-changes.diff`.
+
+### Test status (read first)
+
+| Item | Status |
+|---|---|
+| CPU end-to-end (scaled-down model with random weights; tiny / tiny-long / full, v1.0 / v1.1, tiling, staged VRAM, dynamic budget) | ✅ `tests/test_cpu_pipeline.py` 8/8 |
+| Unit tests (block attention vs. brute-force reference, pixel-exact tile stitching, filename variables, ffmpeg encoding + audio, nodes) | ✅ `tests/test_units.py` 20/20 |
+| sparse_sage2 / block_sparse_attn on GPU match the reference numerically | ⏳ pending: `tests/check_gpu.py` |
+| Quality and speed with the real weights | ⏳ pending (the development environment had no GPU and could not download the weights) |
+
+### Installation
+
+1. Clone into ComfyUI's `custom_nodes`:
+
+   ```bash
+   cd ~/comfyui/custom_nodes
+   git clone https://github.com/caoddgao/ComfyUI-FlashVSR-Linux.git
+   ```
+
+2. Install at least one sparse attention wheel. It must match your torch / CUDA / GPU.
+   [Releases](https://github.com/caoddgao/ComfyUI-FlashVSR-Linux/releases) has wheels built for torch 2.14.1+cu130 and
+   RTX 50 series (sm_120); the build and acceptance log is in
+   [BUILD_REPORT](https://github.com/caoddgao/TE-Speed-FlashVSR/blob/claude/adoring-ramanujan-ytnixo/linux-build/BUILD_REPORT.md).
+   Other GPUs / torch versions need to build from source
+   ([SpargeAttn](https://github.com/woct0rdho/SpargeAttn),
+   [Block-Sparse-Attention](https://github.com/mit-han-lab/Block-Sparse-Attention)).
+
+   ```bash
+   ~/comfyui/.venv/bin/python -m pip install --no-deps spas_sage_attn-0.1.0+cu130torch2.14.1-cp310-abi3-linux_x86_64.whl
+   ~/comfyui/.venv/bin/python -m pip install --no-deps block_sparse_attn-0.0.2+cu130torch2.14.1-cp312-cp312-linux_x86_64.whl  # optional
+   ```
+
+3. `ffmpeg` is required (`sudo apt install ffmpeg`). `einops`, `safetensors` and `tqdm` are usually already installed with ComfyUI.
+
+4. Put the models in `ComfyUI/models/FlashVSR-v1.1/` (or `FlashVSR/` for v1.0):
+
+   ```text
+   diffusion_pytorch_model_streaming_dmd.safetensors
+   LQ_proj_in.ckpt
+   TCDecoder.ckpt          # tiny / tiny-long
+   Wan2.1_VAE.pth          # full
+   posi_prompt.pth         # optional; the bundled copy from upstream is used if missing
+   ```
+
+   A folder whose name contains `1.1` is loaded as v1.1 (causal LQ projection), otherwise as v1.0.
+
+   The models do not have to be under `ComfyUI/models/`; the nodes also search:
+   - folders whose name contains `flashvsr` in the parent directory of each model path from `extra_model_paths.yaml`
+     (usually the `base_path`);
+   - a `flashvsr:` entry in `extra_model_paths.yaml`, pointing either at a model folder or at a directory containing several
+     model folders, for example:
+
+     ```yaml
+     my_models:
+         base_path: /mnt/data/AI_Hub/image_models
+         checkpoints: checkpoints
+         flashvsr: FlashVSR-v1.1
+     ```
+
+If TE-Speed-FlashVSR was installed before, it cannot load on Linux anyway and can be moved out of `custom_nodes`. The node names
+differ, so the two do not conflict.
+
+### Nodes
+
+| Node | Purpose |
+|---|---|
+| **FlashVSR Model (Linux)** | Loads the model: `model` (model folder), `mode` (tiny / tiny-long / full), `precision` (bf16 / fp16), `device` |
+| **FlashVSR Settings (Linux)** | Optional inference settings, connected to Upscale's `settings` |
+| **FlashVSR Upscale (Linux)** | Takes an `IMAGE` frame batch and outputs the upscaled `IMAGE`: `scale` (4 / 2), `color_fix`, `seed` |
+| **FlashVSR Video Combine (Linux)** | Writes mp4 with ffmpeg and previews it in the node; `codec` auto prefers `h264_nvenc` and falls back to `libx264`; accepts `audio` |
+
+Typical wiring: Load Video → FlashVSR Upscale (Linux) → FlashVSR Video Combine (Linux), with the Model node connected to Upscale.
+
+#### Settings
+
+- `quality_profile`: `detail` (sparse 2.0 / local 9), `balanced` (2.0 / 11, default), `throughput` (1.5 / 11).
+  These are upstream's recommended values: sparse_ratio 1.5 is faster, 2.0 is more stable; local_range 9 is sharper, 11 is more stable.
+- `intensity`: strength of the motion-aware dynamic budget; 0 = fixed parameters throughout, like upstream. The algorithm is in
+  `runtime/budget.py`: it estimates per-chunk motion (0–1) from frame differences of the low-res input, keeps fewer top-k windows
+  for static chunks (down to −25%) with local 9, and more for moving chunks (up to +25%) with local 11; when
+  `intensity × motion > 0.5` it also keeps one fewer history KV block (at the default intensity of 0.5 KV is unchanged). This is
+  this project's own heuristic and needs real-world testing; set it to 0 if you don't like it.
+- `spatial_strategy`: `auto` (full frame when output is at most about 1920×1088 and VRAM ≥ 20GB, otherwise tiles), `full_frame`,
+  `adaptive_tiles`.
+- `memory_policy`: `resident` (model stays in VRAM), `staged` (moves the DiT back to RAM before decoding; full mode uses tiled VAE
+  decoding), `auto` (staged when free VRAM < 24GB or when tiling).
+- `attention_budget` / `kv_retention`: set sparse_ratio / kv_ratio directly; -1 uses the profile value.
+- `local_radius`: `auto` / `9` / `11`; when set to 9 or 11 the dynamic budget no longer changes it.
+- `max_tile_edge` / `blend_overlap`: tile edge length and overlap (in input pixels). Tile output size is rounded to a multiple of 128.
+- `preprocess_batch`: number of frames per batch for bicubic upscaling.
+- `attention_backend`: `sparse_sage2` (default, SpargeAttn), `block_sparse_attn` (upstream's original kernel),
+  `auto` (block_sparse_attn for full frames, sparse_sage2 for tiles), `sdpa` (very slow dense reference, for comparison only).
+  If the selected library is unavailable it falls back to the other one and prints the reason to the console.
+
+#### Behavior matching upstream
+
+- Input is bicubic-upscaled to the target size, padded to a multiple of 128, and the result is cropped back to the original size
+  (upstream center-crops and loses the edges; this project does not).
+- Frame count is padded with the last frame to 8k+1 (at least 25 frames, upstream's minimum); output has exactly as many frames as
+  the input.
+- Only one inference step is run (cfg 1.0), the same as upstream's example.
+
+### Self-check
+
+```bash
+cd ~/comfyui/custom_nodes/ComfyUI-FlashVSR-Linux/tests
+~/comfyui/.venv/bin/python test_units.py
+~/comfyui/.venv/bin/python test_cpu_pipeline.py          # takes a few minutes on CPU
+~/comfyui/.venv/bin/python check_gpu.py                  # compares attention kernels with the reference
+~/comfyui/.venv/bin/python check_gpu.py --model-dir ~/comfyui/models/FlashVSR-v1.1 --mode tiny
+```
+
+`check_gpu.py` prints each backend's cosine similarity against the reference (should be > 0.99) and its timing, plus the speed
+and peak VRAM of upscaling a synthetic video with the real weights.
+
+### Layout
+
+```text
+__init__.py, nodes.py     ComfyUI nodes
+runtime/attention.py      sparse attention dispatch (SpargeAttn / Block-Sparse-Attention / SDPA)
+runtime/budget.py         motion-aware per-chunk budget
+runtime/tiling.py         spatial tiling and blend weights
+runtime/runner.py         model loading and the full inference pipeline (no ComfyUI dependency)
+runtime/video.py          ffmpeg video writer
+flashvsr/                 upstream FlashVSR inference code (see NOTICE)
+web/flashvsr_linux.js     in-node preview for Video Combine
+tests/                    CPU tests and GPU self-check
+```
+
+### License
+
+Apache License 2.0, see `LICENSE` and `NOTICE`.
